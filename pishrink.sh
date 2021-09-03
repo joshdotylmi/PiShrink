@@ -90,18 +90,18 @@ cat <<\EOF1 > "$mountdir/etc/rc.local"
 do_expand_rootfs() {
   ROOT_PART=$(mount | sed -n 's|^/dev/\(.*\) on / .*|\1|p')
 
-  PART_NUM=${ROOT_PART#mmcblk0p}
+  PART_NUM=${ROOT_PART#mmcblk2p}
   if [ "$PART_NUM" = "$ROOT_PART" ]; then
     echo "$ROOT_PART is not an SD card. Don't know how to expand"
     return 0
   fi
 
   # Get the starting offset of the root partition
-  PART_START=$(parted /dev/mmcblk0 -ms unit s p | grep "^${PART_NUM}" | cut -f 2 -d: | sed 's/[^0-9]//g')
+  PART_START=$(parted /dev/mmcblk2 -ms unit s p | grep "^${PART_NUM}" | cut -f 2 -d: | sed 's/[^0-9]//g')
   [ "$PART_START" ] || return 1
   # Return value will likely be error for fdisk as it fails to reload the
   # partition table because the root fs is mounted
-  fdisk /dev/mmcblk0 <<EOF
+  fdisk /dev/mmcblk2 <<EOF
 p
 d
 $PART_NUM
@@ -173,9 +173,9 @@ EOM
 should_skip_autoexpand=false
 debug=false
 repair=false
-parallel=false
-verbose=false
-prep=false
+parallel=true
+verbose=true
+prep=true
 ziptool=""
 
 while getopts ":adhprsvzZ" opt; do
@@ -316,7 +316,7 @@ if [[ $prep == true ]]; then
   info "Syspreping: Removing logs, apt archives, dhcp leases and ssh hostkeys"
   mountdir=$(mktemp -d)
   mount "$loopback" "$mountdir"
-  rm -rvf $mountdir/var/cache/apt/archives/* $mountdir/var/lib/dhcpcd5/* $mountdir/var/log/* $mountdir/var/tmp/* $mountdir/tmp/* $mountdir/etc/ssh/*_host_*
+  rm -rvf $mountdir/var/cache/apt/archives/* $mountdir/var/lib/dhcpcd5/* $mountdir/var/log/* $mountdir/var/log.hdd/* $mountdir/var/tmp/* $mountdir/tmp/* $mountdir/root/.local/share/CentraStage/* $mountdir/usr/local/share/CentraStage/* $mountdir/opt/CentraStage $mountdir/etc/NetworkManager/system-connections/* $mountdir/etc/machine-id
   umount "$mountdir"
 fi
 
